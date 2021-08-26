@@ -184,7 +184,7 @@ void call_once(once_flag& flag, Callable&& func, Args&&... args);
 #include <tuple>
 
 
-#include <__undef_min_max>
+//#include <__undef_min_max>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -340,13 +340,13 @@ lock(_L0& __l0, _L1& __l1, _L2& __l2, _L3& ...__l3)
 
 #if defined(_LIBCPP_SGX_HAS_CXX_ATOMIC)
 
-struct _LIBCPP_TYPE_VIS_ONLY once_flag;
+struct _LIBCPP_TYPE_VIS once_flag;
 
 template<class _Callable, class... _Args>
 _LIBCPP_INLINE_VISIBILITY
 void call_once(once_flag&, _Callable&&, _Args&&...);
 
-struct _LIBCPP_TYPE_VIS_ONLY once_flag
+struct _LIBCPP_TYPE_VIS once_flag
 {
     _LIBCPP_INLINE_VISIBILITY
         _LIBCPP_CONSTEXPR

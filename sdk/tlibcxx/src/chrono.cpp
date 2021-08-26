@@ -1,9 +1,8 @@
 //===------------------------- chrono.cpp ---------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -13,42 +12,68 @@
 #include "chrono"
 #include "cerrno"        // errno
 #include "system_error"  // __throw_system_error
-#include <time.h>        // clock_gettime, CLOCK_MONOTONIC and CLOCK_REALTIME
+#include <time.h>        // clock_gettime and CLOCK_{MONOTONIC,REALTIME,MONOTONIC_RAW}
+#include "include/apple_availability.h"
+
+#if __has_include(<unistd.h>)
+# include <unistd.h>
+#endif
 
 #if !defined(CLOCK_REALTIME)
 #include <sys/time.h>        // for gettimeofday and timeval
 #endif
 
-#if !defined(_LIBCPP_HAS_NO_MONOTONIC_CLOCK) && !defined(CLOCK_MONOTONIC)
-#if __APPLE__
-#include <mach/mach_time.h>  // mach_absolute_time, mach_timebase_info_data_t
-#else
-#error "Monotonic clock not implemented"
+#if !defined(__APPLE__) && _POSIX_TIMERS > 0
+# define _LIBCPP_USE_CLOCK_GETTIME
 #endif
+
+#if defined(_LIBCPP_WIN32API)
+#  define WIN32_LEAN_AND_MEAN
+#  define VC_EXTRA_LEAN
+#  include <windows.h>
+#  if _WIN32_WINNT >= _WIN32_WINNT_WIN8
+#    include <winapifamily.h>
+#  endif
+#endif // defined(_LIBCPP_WIN32API)
+
+#if __has_include(<mach/mach_time.h>)
+# include <mach/mach_time.h>
 #endif
+
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace chrono
 {
 
+//
 // system_clock
+
+#if defined(CLOCK_REALTIME) && defined(_LIBCPP_USE_CLOCK_GETTIME)
+
+static system_clock::time_point __libcpp_system_clock_now() {
+  struct timespec tp;
+  if (0 != clock_gettime(CLOCK_REALTIME, &tp))
+    __throw_system_error(errno, "clock_gettime(CLOCK_REALTIME) failed");
+  return system_clock::time_point(seconds(tp.tv_sec) + microseconds(tp.tv_nsec / 1000));
+}
+
+#else
+
+static system_clock::time_point __libcpp_system_clock_now() {
+    timeval tv;
+    gettimeofday(&tv, 0);
+    return system_clock::time_point(seconds(tv.tv_sec) + microseconds(tv.tv_usec));
+}
+
+#endif
 
 const bool system_clock::is_steady;
 
 system_clock::time_point
 system_clock::now() _NOEXCEPT
 {
-#ifdef CLOCK_REALTIME
-    struct timespec tp;
-    if (0 != clock_gettime(CLOCK_REALTIME, &tp))
-        __throw_system_error(errno, "clock_gettime(CLOCK_REALTIME) failed");
-    return time_point(seconds(tp.tv_sec) + microseconds(tp.tv_nsec / 1000));
-#else  // !CLOCK_REALTIME
-    timeval tv;
-    gettimeofday(&tv, 0);
-    return time_point(seconds(tv.tv_sec) + microseconds(tv.tv_usec));
-#endif  // CLOCK_REALTIME
+    return __libcpp_system_clock_now();
 }
 
 time_t
@@ -69,6 +94,7 @@ system_clock::from_time_t(time_t t) _NOEXCEPT
 // Warning:  If this is not truly steady, then it is non-conforming.  It is
 //  better for it to not exist and have the rest of libc++ use system_clock
 //  instead.
+//
 
 const bool steady_clock::is_steady;
 

@@ -1,16 +1,16 @@
 //===-------------------------- bind.cpp ----------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-#define _LIBCPP_BUILDING_BIND
 #include "functional"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+
+#if defined(_LIBCPP_BUILDING_LIBRARY)
 
 namespace placeholders
 {
@@ -27,5 +27,7 @@ const __ph<9>   _9{};
 const __ph<10> _10{};
 
 }  // placeholders
+
+#endif
 
 _LIBCPP_END_NAMESPACE_STD

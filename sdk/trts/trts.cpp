@@ -186,13 +186,16 @@ void * sgx_ocalloc(size_t size)
     // the compiler may optimize the following code to probe the pages in any order
     // while we only expect the probe order should be from higher addr to lower addr
     // so use volatile to avoid optimization by the compiler
-    for(volatile size_t page = first_page; page >= last_page; page -= SE_PAGE_SIZE)
+    for(volatile size_t page = first_page; page >= last_page; )
     {
         // OS may refuse to commit a physical page if the page fault address is smaller than RSP
         // So update the outside stack address before probe the page
         ssa_gpr->REG(sp_u) = page;
 
         *reinterpret_cast<uint8_t *>(page) = 0;
+
+        size_t tmp = page - SE_PAGE_SIZE;
+        page = tmp;
     }
 
     // update the outside stack address in the SSA to the allocated address

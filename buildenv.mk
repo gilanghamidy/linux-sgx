@@ -121,7 +121,7 @@ CFLAGS += -Wjump-misses-init -Wstrict-prototypes -Wunsuffixed-float-constants
 # additional warnings flags for C++
 CXXFLAGS += -Wnon-virtual-dtor
 
-CXXFLAGS += -std=c++11
+CXXFLAGS += -std=c++20
 
 .DEFAULT_GOAL := all
 # this turns off the RCS / SCCS implicit rules of GNU Make

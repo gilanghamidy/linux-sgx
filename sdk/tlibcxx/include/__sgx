@@ -110,7 +110,7 @@
 
 // Current goal is to support C++11 so define the version accordingly.
 // Libc++ also supports 14 and beyond. 
-#define _LIBCPP_STD_VER 11
+//#define _LIBCPP_STD_VER 20
 
 /////////////
 // SECTION 3: DEFINE VARIOUS LIBC++ DEFINES TO CUSTOMIZE USAGE FOR SGX
@@ -126,6 +126,11 @@
 // SECTION 4: SGX specific defines which replace __has_feature(cxx_something)
 /////////////
 #define _LIBCPP_SGX_HAS_CXX_ATOMIC //__has_feature(cxx_atomic)
+
+#define _LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
+#define _LIBCPP_DISABLE_AVAILABILITY
+#define _LIBCPP_BUILDING_LIBRARY
+
 #endif
 
 #endif  // _LIBCPP_SGX
