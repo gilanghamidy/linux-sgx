@@ -1,5 +1,6 @@
+#!/bin/sh
 #
-# Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
+# Copyright (C) 2022 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -27,49 +28,11 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-#
 
-include buildenv.mk
+set -e
+docker build --target sample_deb --build-arg https_proxy=$https_proxy \
+             --build-arg http_proxy=$http_proxy -t sgx_sample_deb -f ./Dockerfile ../../
 
-define DIR_EXISTS
-$(shell test -d $(1) && echo "$(1)")
-endef
-
-SGX_SDK := /tmp/intel/sgxsdk
-export SGX_SDK
-
-.PHONY: build psw dcap install clean sdk install_sdk ippcp
-
-build: psw dcap
-
-psw: install_sdk
-	@$(MAKE) -C psw/ USE_OPT_LIBS=$(USE_OPT_LIBS)
-
-dcap: install_sdk
-	@$(MAKE) -C external/dcap_source/
-
-install:
-	@$(MAKE) -I linux/installer/common/psw-dcap -f linux/installer/common/psw-dcap/Makefile SRCDIR=. DESTDIR=$(DESTDIR) install
-
-clean:
-	@$(MAKE) -C psw/                  clean
-	@$(MAKE) -C external/dcap_source/ clean
-	@$(MAKE) -C sdk/                  clean
-	@$(MAKE) -C external/ippcp_internal/ clean
-ifneq ($(call DIR_EXISTS,$(SGX_SDK)),)
-	$(SGX_SDK)/uninstall.sh
-endif
-
-ippcp:
-	$(MAKE) -C external/ippcp_internal/
-
-sdk: ippcp
-	$(MAKE) -C sdk/ USE_OPT_LIBS=$(USE_OPT_LIBS)
-	$(MAKE) -C external/dcap_source/QuoteVerification/dcap_tvl clean
-	$(MAKE) -C external/dcap_source/QuoteVerification/dcap_tvl
-
-install_sdk: sdk
-	./linux/installer/bin/build-installpkg.sh sdk
-ifeq ($(call DIR_EXISTS,$(SGX_SDK)),)
-	./linux/installer/bin/sgx_linux_x64_sdk_*.bin --prefix=$(dir $(SGX_SDK))
-endif
+# Another container should expose AESM and its socket in aesmd-socket volume.
+# Replace /dev/sgx/enclave with /dev/isgx if you use the Legacy Launch Control driver
+docker run --env http_proxy --env https_proxy --device=/dev/sgx/enclave -v aesmd-socket:/var/run/aesmd -it sgx_sample_deb

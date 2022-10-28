@@ -1,5 +1,6 @@
+#!/bin/sh
 #
-# Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
+# Copyright (C) 2022 Intel Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -27,49 +28,14 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-#
 
-include buildenv.mk
+set -e
+docker build --target aesm_deb --build-arg https_proxy=$https_proxy \
+             --build-arg http_proxy=$http_proxy -t sgx_aesm_deb -f ./Dockerfile ../../
 
-define DIR_EXISTS
-$(shell test -d $(1) && echo "$(1)")
-endef
+docker volume create --driver local --opt type=tmpfs --opt device=tmpfs --opt o=rw aesmd-socket
 
-SGX_SDK := /tmp/intel/sgxsdk
-export SGX_SDK
+# If you use the Legacy Launch Control driver, replace /dev/sgx/enclave with /dev/isgx, and remove
+# --device=/dev/sgx/provision
 
-.PHONY: build psw dcap install clean sdk install_sdk ippcp
-
-build: psw dcap
-
-psw: install_sdk
-	@$(MAKE) -C psw/ USE_OPT_LIBS=$(USE_OPT_LIBS)
-
-dcap: install_sdk
-	@$(MAKE) -C external/dcap_source/
-
-install:
-	@$(MAKE) -I linux/installer/common/psw-dcap -f linux/installer/common/psw-dcap/Makefile SRCDIR=. DESTDIR=$(DESTDIR) install
-
-clean:
-	@$(MAKE) -C psw/                  clean
-	@$(MAKE) -C external/dcap_source/ clean
-	@$(MAKE) -C sdk/                  clean
-	@$(MAKE) -C external/ippcp_internal/ clean
-ifneq ($(call DIR_EXISTS,$(SGX_SDK)),)
-	$(SGX_SDK)/uninstall.sh
-endif
-
-ippcp:
-	$(MAKE) -C external/ippcp_internal/
-
-sdk: ippcp
-	$(MAKE) -C sdk/ USE_OPT_LIBS=$(USE_OPT_LIBS)
-	$(MAKE) -C external/dcap_source/QuoteVerification/dcap_tvl clean
-	$(MAKE) -C external/dcap_source/QuoteVerification/dcap_tvl
-
-install_sdk: sdk
-	./linux/installer/bin/build-installpkg.sh sdk
-ifeq ($(call DIR_EXISTS,$(SGX_SDK)),)
-	./linux/installer/bin/sgx_linux_x64_sdk_*.bin --prefix=$(dir $(SGX_SDK))
-endif
+docker run --env http_proxy --env https_proxy --device=/dev/sgx/enclave --device=/dev/sgx/provision -v /dev/log:/dev/log -v aesmd-socket:/var/run/aesmd -it sgx_aesm_deb
